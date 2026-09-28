@@ -49,9 +49,17 @@ function LoginForm() {
 
     const session = await getSession();
     await mergeCartOnLoginAction();
-    const destination =
-      explicitCallbackUrl ??
-      (session?.user.role === "admin" ? "/admin" : "/account");
+
+
+
+      const destination =
+      explicitCallbackUrl &&
+      explicitCallbackUrl.startsWith("/") &&
+      !explicitCallbackUrl.startsWith("//")
+        ? explicitCallbackUrl
+        : session?.user.role === "admin"
+          ? "/admin"
+          : "/account";
 
     router.push(destination);
     router.refresh();

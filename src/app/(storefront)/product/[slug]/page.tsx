@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getProductBySlug } from "@/services/product.service";
 import { AddToBag } from "@/components/storefront/AddToBag";
+import { auth } from "@/lib/auth";
+import { getWishlistProductIds } from "@/services/wishlist.service";
+import { WishlistButton } from "@/components/storefront/WishlistButton";
 
 function formatPrice(amount: number, currency = "KES") {
   return new Intl.NumberFormat("en-KE", {
@@ -18,6 +21,7 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
+  const [session, wishlistIds] = await Promise.all([auth(), getWishlistProductIds()]);
 
   if (!product) notFound();
 
@@ -49,9 +53,12 @@ export default async function ProductPage({
         <p className="text-lg mb-6">
           {onSale ? (
             <>
-              <span className="text-error">
+
+            
+              <span className="text-primary">
                 {formatPrice(product.salePrice!, product.currency)}
               </span>{" "}
+
               <span className="text-fg-muted line-through">
                 {formatPrice(product.price, product.currency)}
               </span>
@@ -90,6 +97,15 @@ export default async function ProductPage({
       : product.stockQuantity > 0
   }
 />
+
+
+  <div className="mt-3">
+          <WishlistButton
+            productId={String(product._id)}
+            initialSaved={wishlistIds.includes(String(product._id))}
+            isLoggedIn={!!session}
+          />
+    </div>
 
 
 

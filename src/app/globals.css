@@ -1,26 +1,19 @@
 @import "tailwindcss";
 
-/*
-  Design tokens for the store. These are the DEFAULTS a brand ships with.
-  Store Settings (admin) will eventually override the --color-* and
-  --font-* custom properties at runtime without touching this file.
-*/
 :root {
-  /* Color: neutral/monochrome base. No blue/purple anywhere on purpose. */
-  --color-bg: #FAFAF8;         /* warm off-white, never pure #FFF */
-  --color-surface: #FFFFFF;    /* cards, product tiles, drawers */
-  --color-fg: #141414;         /* primary text */
-  --color-fg-muted: #6B6B68;   /* secondary text, meta */
-  --color-border: #E4E2DD;     /* hairline dividers only */
-  --color-accent: #141414;     /* CTAs: black-on-white, not a "brand color" */
-  --color-accent-fg: #FAFAF8;  /* text on top of accent */
+  --color-bg: #FAFAF8;
+  --color-surface: #FFFFFF;
+  --color-fg: #141414;
+  --color-fg-muted: #6B6B68;
+  --color-border: #E4E2DD;
+  --color-accent: #141414;
+  --color-accent-fg: #FAFAF8;
+  --color-primary: #141414;
   --color-error: #B3261E;
 
-  /* Type: editorial serif for display, neutral grotesque for UI/body */
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-body: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-archivo);
 
-  /* Deliberately large jumps between heading sizes, not a 1.25x SaaS scale */
   --text-hero: clamp(2.75rem, 6vw, 5.5rem);
   --text-h1: clamp(2.25rem, 4vw, 3.5rem);
   --text-h2: clamp(1.75rem, 2.8vw, 2.5rem);
@@ -38,13 +31,14 @@
   --color-border: var(--color-border);
   --color-accent: var(--color-accent);
   --color-accent-fg: var(--color-accent-fg);
+  --color-primary: var(--color-primary);
   --color-error: var(--color-error);
 
   --font-display: var(--font-display);
   --font-body: var(--font-body);
 
   --radius-none: 0px;
-  --radius-sm: 1px; /* hairline only — never full "rounded card" radii */
+  --radius-sm: 1px;
 }
 
 body {
@@ -60,7 +54,6 @@ h1, h2, h3, .font-display {
   font-weight: 500;
 }
 
-/* Respect reduced motion globally, per the accessibility floor */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

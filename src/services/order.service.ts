@@ -5,6 +5,7 @@ import { getCartSummary, clearCurrentCart } from "@/services/cart.service";
 import { validateAndComputeDiscount, incrementCouponUsage } from "@/services/coupon.service";
 import { auth } from "@/lib/auth";
 
+
 export interface ShippingAddressInput {
   fullName: string;
   line1: string;
@@ -164,4 +165,11 @@ export async function placeOrder(input: PlaceOrderInput) {
 export async function getOrderByNumber(orderNumber: string) {
   await connectToDatabase();
   return Order.findOne({ orderNumber }).lean();
+}
+
+export async function getOrdersForCurrentUser() {
+  const session = await auth();
+  if (!session) return [];
+  await connectToDatabase();
+  return Order.find({ user: session.user.id }).sort({ createdAt: -1 }).lean();
 }

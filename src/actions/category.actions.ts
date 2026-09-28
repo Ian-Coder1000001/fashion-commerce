@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import Category from "@/models/Category";
@@ -26,11 +26,11 @@ export async function createCategoryAction(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const slug = slugify(String(formData.get("slug") ?? ""));
-  
 
   if (!name || !slug) throw new Error("Name and slug are required.");
 
   await Category.create({ name, slug });
+  updateTag("categories");
   revalidatePath("/admin/categories");
 }
 
@@ -46,5 +46,6 @@ export async function deleteCategoryAction(id: string) {
   }
 
   await Category.findByIdAndDelete(id);
+  updateTag("categories");
   revalidatePath("/admin/categories");
 }

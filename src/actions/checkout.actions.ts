@@ -69,15 +69,20 @@ export async function placeOrderAction(
       paymentMethod,
       couponCode: String(formData.get("couponCode") ?? "").trim() || undefined,
     });
-  } catch (err) {
+
+
+    } catch (err) {
     if (err instanceof InsufficientStockError) {
       return { error: err.message };
     }
     if (err instanceof CouponError) {
       return { error: err.message };
     }
+    console.error("[checkout] placeOrder failed:", err);
     return { error: "Something went wrong placing your order. Please try again." };
   }
+
+
 
   if (paymentMethod === "pesapal") {
     let redirectUrl: string;

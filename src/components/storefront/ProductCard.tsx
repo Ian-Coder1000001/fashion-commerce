@@ -53,7 +53,7 @@ export function ProductCard({
       <p className="mt-1 text-sm">
         {onSale ? (
           <>
-            <span className="text-error">{formatPrice(salePrice!, currency)}</span>{" "}
+            <span className="text-primary">{formatPrice(salePrice!, currency)}</span>{" "}
             <span className="text-fg-muted line-through">
               {formatPrice(price, currency)}
             </span>

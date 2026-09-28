@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { listCustomersForAdmin } from "@/actions/customer.actions";
 
@@ -21,14 +22,17 @@ export default async function AdminCustomersPage({
     <div>
       <h1 className="font-display text-2xl mb-8">Customers</h1>
 
-      <form className="mb-8 max-w-sm">
+      <form className="mb-8 flex gap-2 max-w-sm">
         <input
           type="text"
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search by name or email…"
-          className="w-full h-11 border border-border bg-surface px-3 text-sm"
+          className="flex-1 h-11 border border-border bg-surface px-3 text-sm"
         />
+        <Button type="submit" size="sm" variant="secondary">
+          Search
+        </Button>
       </form>
 
       {customers.length === 0 ? (

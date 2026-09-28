@@ -28,28 +28,33 @@ const NAV_SECTIONS = [
       { href: "/admin/newsletter", label: "Newsletter" },
     ],
   },
-  {
+
+
+
+    {
     label: "Content",
     items: [
       { href: "/admin/blog", label: "Blog" },
+      { href: "/admin/about", label: "About Page" },
       { href: "/admin/media", label: "Media" },
       { href: "/admin/messages", label: "Messages" },
     ],
   },
+
   {
     label: "Store",
     items: [{ href: "/admin/settings", label: "Settings" }],
   },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ storeName }: { storeName?: string }) {
   const pathname = usePathname();
 
   return (
     <aside className="w-60 shrink-0 border-r border-border h-screen sticky top-0 flex flex-col">
       <div className="h-16 flex items-center px-6 border-b border-border">
         <Link href="/admin" className="font-display text-lg">
-          Store Admin
+          {storeName ?? "Store"} Admin
         </Link>
       </div>
 
