@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useState, useTransition, useEffect } from "react";
 import { placeOrderAction, type CheckoutState } from "@/actions/checkout.actions";
 import { applyCouponAction } from "@/actions/coupon.actions";
+import { getShippingEstimateAction } from "@/actions/shipping.actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -24,6 +25,13 @@ interface CheckoutFormProps {
   accountName: string | null;
   savedAddresses: SavedAddress[];
   subtotal: number;
+}
+
+interface ShippingEstimate {
+  fee: number;
+  freeShippingApplied: boolean;
+  estimatedDays?: string;
+  zoneName?: string;
 }
 
 const initialState: CheckoutState = {};
@@ -61,6 +69,42 @@ export function CheckoutForm({
   const [couponError, setCouponError] = useState<string | null>(null);
   const [isApplyingCoupon, startCouponTransition] = useTransition();
 
+  // Tracked purely so we can re-estimate shipping as either field
+  // changes — the inputs are still normal named form fields submitted
+  // via FormData, this state doesn't replace that.
+  const [manualCountry, setManualCountry] = useState("");
+  const [manualRegion, setManualRegion] = useState("");
+
+  const [shippingEstimate, setShippingEstimate] = useState<ShippingEstimate | null>(
+    null
+  );
+  const [isEstimatingShipping, startShippingTransition] = useTransition();
+
+  const usingSavedAddress = isLoggedIn && selectedAddressId !== "new";
+  const selected = savedAddresses.find((a) => a._id === selectedAddressId);
+
+  function updateShippingEstimate(country: string, region: string) {
+    if (!country.trim()) {
+      setShippingEstimate(null);
+      return;
+    }
+    startShippingTransition(async () => {
+      const result = await getShippingEstimateAction(
+        country.trim(),
+        region.trim() || undefined,
+        subtotal
+      );
+      setShippingEstimate(result);
+    });
+  }
+
+  useEffect(() => {
+    if (usingSavedAddress && selected) {
+      updateShippingEstimate(selected.country, selected.region ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddressId]);
+
   function handleApplyCoupon() {
     if (!couponInput.trim()) return;
     startCouponTransition(async () => {
@@ -84,8 +128,8 @@ export function CheckoutForm({
     setCouponInput("");
   }
 
-  const usingSavedAddress = isLoggedIn && selectedAddressId !== "new";
-  const selected = savedAddresses.find((a) => a._id === selectedAddressId);
+  const shippingFee = shippingEstimate?.fee ?? 0;
+  const total = subtotal - discountAmount + shippingFee;
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
@@ -168,9 +212,23 @@ export function CheckoutForm({
             <Input label="Address line 1" name="line1" required className="col-span-2" />
             <Input label="Address line 2" name="line2" className="col-span-2" />
             <Input label="City" name="city" required />
-            <Input label="Region / State" name="region" />
+            <Input
+              label="County / Region"
+              name="region"
+              placeholder="Nairobi, Kiambu…"
+              value={manualRegion}
+              onChange={(e) => setManualRegion(e.target.value)}
+              onBlur={() => updateShippingEstimate(manualCountry, manualRegion)}
+            />
             <Input label="Postal code" name="postalCode" />
-            <Input label="Country" name="country" required />
+            <Input
+              label="Country"
+              name="country"
+              required
+              value={manualCountry}
+              onChange={(e) => setManualCountry(e.target.value)}
+              onBlur={() => updateShippingEstimate(manualCountry, manualRegion)}
+            />
             <Input label="Phone" name="phone" required className="col-span-2" />
           </div>
         )}
@@ -215,8 +273,13 @@ export function CheckoutForm({
           </div>
         )}
         {couponError && <p className="text-sm text-error mt-2">{couponError}</p>}
+      </section>
 
-        <div className="text-sm mt-4 flex flex-col gap-1 max-w-sm">
+      <section>
+        <h2 className="text-sm tracking-wide uppercase text-fg-muted mb-4">
+          Order Total
+        </h2>
+        <div className="text-sm flex flex-col gap-1 max-w-sm">
           <div className="flex justify-between text-fg-muted">
             <span>Subtotal</span>
             <span>{formatPrice(subtotal)}</span>
@@ -227,9 +290,26 @@ export function CheckoutForm({
               <span>-{formatPrice(discountAmount)}</span>
             </div>
           )}
+          <div className="flex justify-between text-fg-muted">
+            <span>Shipping</span>
+            <span>
+              {isEstimatingShipping
+                ? "Calculating…"
+                : shippingEstimate
+                  ? shippingEstimate.freeShippingApplied
+                    ? "Free"
+                    : formatPrice(shippingEstimate.fee)
+                  : "Enter address to calculate"}
+            </span>
+          </div>
+          {shippingEstimate?.estimatedDays && (
+            <p className="text-xs text-fg-muted">
+              Estimated delivery: {shippingEstimate.estimatedDays}
+            </p>
+          )}
           <div className="flex justify-between font-medium pt-1 border-t border-border">
             <span>Total</span>
-            <span>{formatPrice(subtotal - discountAmount)}</span>
+            <span>{formatPrice(total)}</span>
           </div>
         </div>
       </section>

@@ -43,7 +43,10 @@ const NAV_SECTIONS = [
 
   {
     label: "Store",
-    items: [{ href: "/admin/settings", label: "Settings" }],
+    items: [
+      { href: "/admin/shipping", label: "Shipping" },
+      { href: "/admin/settings", label: "Settings" },
+    ],
   },
 ];
 

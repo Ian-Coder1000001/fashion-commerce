@@ -11,11 +11,12 @@ export interface CreateProductInput {
   category: string;
   collections?: string[];
   price: number;
-  salePrice?: number;
+  salePrice?: number | null;
   stockQuantity?: number;
   images?: MediaAsset[];
   status?: "draft" | "published" | "archived";
 }
+
 
 export async function listProducts(params: {
   page?: number;
@@ -24,19 +25,56 @@ export async function listProducts(params: {
   collection?: string;
   status?: string;
   search?: string;
+  size?: string;
+  color?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: "newest" | "price_asc" | "price_desc";
 }) {
   await connectToDatabase();
-  const { page = 1, limit = 24, category, collection, status, search } = params;
+  const {
+    page = 1,
+    limit = 24,
+    category,
+    collection,
+    status,
+    search,
+    size,
+    color,
+    minPrice,
+    maxPrice,
+    sort = "newest",
+  } = params;
 
   const filter: Record<string, unknown> = {};
   if (category) filter.category = category;
   if (collection) filter.collections = collection;
   if (status) filter.status = status;
   if (search) filter.$text = { $search: search };
+  if (size) filter["variants.size"] = size;
+  if (color) filter["variants.color"] = color;
+  if (minPrice != null || maxPrice != null) {
+    filter.price = {
+      ...(minPrice != null ? { $gte: minPrice } : {}),
+      ...(maxPrice != null ? { $lte: maxPrice } : {}),
+    };
+  }
+
+  const sortMap: Record<string, Record<string, 1 | -1>> = {
+    newest: { createdAt: -1 },
+    price_asc: { price: 1 },
+    price_desc: { price: -1 },
+  };
+
+
+
+
+
+
 
   const [items, total] = await Promise.all([
     Product.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sortMap[sort])
       .skip((page - 1) * limit)
       .limit(limit)
       .populate("category", "name slug")
@@ -45,6 +83,24 @@ export async function listProducts(params: {
   ]);
 
   return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+}
+
+
+
+export async function getAvailableVariantOptions(categoryId?: string) {
+  await connectToDatabase();
+  const filter: Record<string, unknown> = { status: "published" };
+  if (categoryId) filter.category = categoryId;
+
+  const [sizes, colors] = await Promise.all([
+    Product.distinct("variants.size", filter),
+    Product.distinct("variants.color", filter),
+  ]);
+
+  return {
+    sizes: sizes.filter(Boolean).sort(),
+    colors: colors.filter(Boolean).sort(),
+  };
 }
 
 export async function getProductById(id: string) {
@@ -104,6 +160,37 @@ export async function setPrimaryProductImage(productId: string, publicId: string
   await product.save();
   return product;
 }
+
+
+export interface VariantInput {
+  size?: string;
+  color?: string;
+  sku: string;
+  price?: number;
+  stock: number;
+}
+
+export async function addProductVariant(productId: string, variant: VariantInput) {
+  await connectToDatabase();
+  return Product.findByIdAndUpdate(
+    productId,
+    { $push: { variants: variant } },
+    { new: true }
+  );
+}
+
+export async function removeProductVariant(productId: string, variantId: string) {
+  await connectToDatabase();
+  return Product.findByIdAndUpdate(
+    productId,
+    { $pull: { variants: { _id: variantId } } },
+    { new: true }
+  );
+}
+
+
+
+
 
 export async function createProduct(input: CreateProductInput) {
   await connectToDatabase();

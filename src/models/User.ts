@@ -22,6 +22,8 @@ const UserSchema = new Schema(
 
     // Absent for accounts created via Google OAuth
     passwordHash: { type: String, select: false },
+    resetPasswordTokenHash: { type: String, select: false, default: null },
+    resetPasswordExpires: { type: Date, select: false, default: null },
 
     provider: {
       type: String,

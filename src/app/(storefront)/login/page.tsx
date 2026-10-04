@@ -7,8 +7,6 @@ import Link from "next/link";
 import { signIn, getSession } from "next-auth/react";
 import { mergeCartOnLoginAction } from "@/actions/cart.actions";
 
-
-
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -50,9 +48,7 @@ function LoginForm() {
     const session = await getSession();
     await mergeCartOnLoginAction();
 
-
-
-      const destination =
+    const destination =
       explicitCallbackUrl &&
       explicitCallbackUrl.startsWith("/") &&
       !explicitCallbackUrl.startsWith("//")
@@ -72,7 +68,10 @@ function LoginForm() {
         <p className="text-sm text-fg-muted mb-8">
           Access your account or the store admin. New here?{" "}
           <Link href="/register" className="underline">
-            Create an account
+            Create an account ·{" "}
+            <Link href="/forgot-password" className="underline">
+              Forgot password?
+            </Link>
           </Link>
           .
         </p>

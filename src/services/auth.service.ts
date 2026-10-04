@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/db";
 import User from "@/models/User";
+import { randomBytes, createHash } from "crypto";
 
 const SALT_ROUNDS = 12;
 
@@ -28,6 +29,58 @@ export interface AuthenticatedUser {
  * account, OAuth-only account) without distinguishing which — never
  * leak which part was wrong to the client.
  */
+
+
+
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * Generates a reset token, stores only its hash (never the raw token)
+ * against the user, and returns the raw token for the caller to email
+ * out. Always "succeeds" even if the email doesn't exist — the caller
+ * must not reveal whether an account exists for a given email, or this
+ * becomes a way to enumerate registered customers.
+ */
+export async function createPasswordResetToken(email: string): Promise<string | null> {
+  await connectToDatabase();
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) return null;
+
+  const rawToken = randomBytes(32).toString("hex");
+  user.resetPasswordTokenHash = hashToken(rawToken);
+  user.resetPasswordExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+  await user.save();
+
+  return rawToken;
+}
+
+export async function resetPasswordWithToken(
+  rawToken: string,
+  newPassword: string
+): Promise<boolean> {
+  await connectToDatabase();
+
+  const tokenHash = hashToken(rawToken);
+  const user = await User.findOne({
+    resetPasswordTokenHash: tokenHash,
+    resetPasswordExpires: { $gt: new Date() },
+  }).select("+resetPasswordTokenHash +resetPasswordExpires");
+
+  if (!user) return false;
+
+  user.passwordHash = await hashPassword(newPassword);
+  user.resetPasswordTokenHash = null;
+  user.resetPasswordExpires = null;
+  await user.save();
+
+  return true;
+}
+
+
+
 export async function authenticateWithCredentials(
   email: string,
   password: string

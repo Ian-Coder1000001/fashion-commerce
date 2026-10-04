@@ -11,7 +11,10 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { listCollectionsForAdmin } from "@/actions/collection.actions";
-
+import {
+  addVariantAction,
+  removeVariantAction,
+} from "@/actions/product.actions";
 
 export default async function AdminEditProductPage({
   params,
@@ -28,14 +31,14 @@ export default async function AdminEditProductPage({
   if (!product) notFound();
 
   const assignedCollectionIds = new Set(
-    (product.collections ?? []).map((c: unknown) => String(c))
+    (product.collections ?? []).map((c: unknown) => String(c)),
   );
 
   return (
     <div>
       <h1 className="font-display text-2xl mb-8">{product.name}</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-4xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-5xl">
         <section>
           <h2 className="text-sm tracking-wide uppercase text-fg-muted mb-4">
             Details
@@ -44,11 +47,23 @@ export default async function AdminEditProductPage({
             action={updateProductDetailsAction.bind(null, id)}
             className="flex flex-col gap-4"
           >
-            <Input label="Name" name="name" defaultValue={product.name} required />
-            <Input label="Slug" name="slug" defaultValue={product.slug} required />
+            <Input
+              label="Name"
+              name="name"
+              defaultValue={product.name}
+              required
+            />
+            <Input
+              label="Slug"
+              name="slug"
+              defaultValue={product.slug}
+              required
+            />
             <Input label="SKU" name="sku" defaultValue={product.sku} required />
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs tracking-wide text-fg-muted">Category</label>
+              <label className="text-xs tracking-wide text-fg-muted">
+                Category
+              </label>
               <select
                 name="category"
                 defaultValue={String(product.category)}
@@ -63,8 +78,7 @@ export default async function AdminEditProductPage({
               </select>
             </div>
 
-
-                        {collections.length > 0 && (
+            {collections.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs tracking-wide text-fg-muted">
                   Collections
@@ -79,7 +93,9 @@ export default async function AdminEditProductPage({
                         type="checkbox"
                         name="collections"
                         value={String(c._id)}
-                        defaultChecked={assignedCollectionIds.has(String(c._id))}
+                        defaultChecked={assignedCollectionIds.has(
+                          String(c._id),
+                        )}
                       />
                       {c.name}
                     </label>
@@ -87,9 +103,6 @@ export default async function AdminEditProductPage({
                 </div>
               </div>
             )}
-
-
-
 
             <Input
               label="Price"
@@ -99,14 +112,36 @@ export default async function AdminEditProductPage({
               defaultValue={product.price}
               required
             />
+
             <Input
-              label="Stock quantity"
-              name="stockQuantity"
+              label="Sale price (optional)"
+              name="salePrice"
               type="number"
-              defaultValue={product.stockQuantity}
+              step="0.01"
+              defaultValue={product.salePrice ?? ""}
+              placeholder="Leave blank for no sale"
             />
+
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs tracking-wide text-fg-muted">Status</label>
+              <Input
+                label="Stock quantity"
+                name="stockQuantity"
+                type="number"
+                defaultValue={product.stockQuantity}
+                disabled={(product.variants ?? []).length > 0}
+              />
+              {(product.variants ?? []).length > 0 && (
+                <p className="text-xs text-fg-muted">
+                  This product has variants, so stock is tracked per size/color
+                  below instead. This field is ignored at checkout.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs tracking-wide text-fg-muted">
+                Status
+              </label>
               <select
                 name="status"
                 defaultValue={product.status}
@@ -145,7 +180,7 @@ export default async function AdminEditProductPage({
               {product.images.map(
                 (
                   image: { publicId: string; secureUrl: string },
-                  index: number
+                  index: number,
                 ) => (
                   <div key={image.publicId} className="flex flex-col gap-1">
                     <div className="relative aspect-[3/4] border border-border bg-surface">
@@ -167,7 +202,7 @@ export default async function AdminEditProductPage({
                           action={setPrimaryProductImageAction.bind(
                             null,
                             id,
-                            image.publicId
+                            image.publicId,
                           )}
                         >
                           <button className="text-fg-muted hover:text-fg">
@@ -181,7 +216,7 @@ export default async function AdminEditProductPage({
                         action={removeProductImageAction.bind(
                           null,
                           id,
-                          image.publicId
+                          image.publicId,
                         )}
                       >
                         <button className="text-fg-muted hover:text-error">
@@ -190,7 +225,7 @@ export default async function AdminEditProductPage({
                       </form>
                     </div>
                   </div>
-                )
+                ),
               )}
             </div>
           )}
@@ -216,6 +251,85 @@ export default async function AdminEditProductPage({
           <p className="text-xs text-fg-muted mt-2">
             The first image is used as the primary image across the site.
             Deleting an image removes it from Cloudinary too.
+          </p>
+        </section>
+
+        <section className="lg:col-span-2">
+          <h2 className="text-sm tracking-wide uppercase text-fg-muted mb-4">
+            Variants (Sizes / Colors)
+          </h2>
+
+          {(product.variants ?? []).length > 0 && (
+            <table className="w-full text-sm border-t border-border mb-6">
+              <thead>
+                <tr className="text-left text-fg-muted border-b border-border">
+                  <th className="py-2 font-normal">Size</th>
+                  <th className="py-2 font-normal">Color</th>
+                  <th className="py-2 font-normal">SKU</th>
+                  <th className="py-2 font-normal">Price override</th>
+                  <th className="py-2 font-normal">Stock</th>
+                  <th className="py-2 font-normal w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {product.variants.map(
+                  (v: {
+                    _id: string;
+                    size?: string;
+                    color?: string;
+                    sku: string;
+                    price?: number;
+                    stock: number;
+                  }) => (
+                    <tr key={String(v._id)} className="border-b border-border">
+                      <td className="py-2">{v.size ?? "—"}</td>
+                      <td className="py-2">{v.color ?? "—"}</td>
+                      <td className="py-2 text-fg-muted">{v.sku}</td>
+                      <td className="py-2">{v.price ?? "—"}</td>
+                      <td className="py-2">{v.stock}</td>
+                      <td className="py-2">
+                        <form
+                          action={removeVariantAction.bind(
+                            null,
+                            id,
+                            String(v._id),
+                          )}
+                        >
+                          <button className="text-xs text-fg-muted hover:text-error">
+                            Remove
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          )}
+
+          <form
+            action={addVariantAction.bind(null, id)}
+            className="grid grid-cols-5 gap-3 border border-border p-4 max-w-3xl"
+          >
+            <Input label="Size" name="size" placeholder="M, L, 42…" />
+            <Input label="Color" name="color" placeholder="Black, Navy…" />
+            <Input label="SKU" name="sku" required />
+            <Input
+              label="Price override"
+              name="price"
+              type="number"
+              step="0.01"
+            />
+            <Input label="Stock" name="stock" type="number" required />
+            <div className="col-span-5">
+              <Button type="submit" size="sm">
+                Add variant
+              </Button>
+            </div>
+          </form>
+          <p className="text-xs text-fg-muted mt-2">
+            Leave price override blank to use the product&apos;s base price for
+            this variant.
           </p>
         </section>
       </div>

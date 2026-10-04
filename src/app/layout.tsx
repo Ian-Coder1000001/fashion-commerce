@@ -24,7 +24,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${FONT_CLASSES} h-full antialiased`} style={themeStyle}>
-      <body className="min-h-full flex flex-col bg-bg text-fg">
+      <body className="min-h-full flex flex-col bg-bg text-fg" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

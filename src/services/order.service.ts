@@ -3,8 +3,8 @@ import Order from "@/models/Order";
 import Product from "@/models/Product";
 import { getCartSummary, clearCurrentCart } from "@/services/cart.service";
 import { validateAndComputeDiscount, incrementCouponUsage } from "@/services/coupon.service";
+import { estimateShipping } from "@/services/shipping.service";
 import { auth } from "@/lib/auth";
-
 
 export interface ShippingAddressInput {
   fullName: string;
@@ -36,16 +36,24 @@ async function decrementStock(
   quantity: number
 ): Promise<boolean> {
   if (variantId) {
+    // $elemMatch is required here, not separate "variants._id" / "variants.$.stock"
+    // filter conditions — the $ positional operator only works inside the
+    // UPDATE document, never inside the query/filter document. Using it in
+    // the filter silently matches nothing, which was causing every
+    // variant checkout to report "insufficient stock" regardless of the
+    // real number.
     const result = await Product.findOneAndUpdate(
       {
         _id: productId,
-        "variants._id": variantId,
-        "variants.$.stock": { $gte: quantity },
+        variants: { $elemMatch: { _id: variantId, stock: { $gte: quantity } } },
       },
       { $inc: { "variants.$.stock": -quantity } }
     );
     return !!result;
   }
+
+
+
 
   const result = await Product.findOneAndUpdate(
     { _id: productId, stockQuantity: { $gte: quantity } },
@@ -92,9 +100,6 @@ export async function placeOrder(input: PlaceOrderInput) {
     throw new Error("Your bag is empty.");
   }
 
-  // Coupon is validated fresh here — never trust a discount amount
-  // computed on the client, even if the customer already saw an "Apply"
-  // preview earlier in the checkout flow.
   let discountAmount = 0;
   let appliedCouponId: string | undefined;
   if (input.couponCode) {
@@ -105,6 +110,15 @@ export async function placeOrder(input: PlaceOrderInput) {
     discountAmount = result.discountAmount;
     appliedCouponId = result.couponId;
   }
+
+  // Shipping is recomputed here from the submitted address — never
+  // trust a fee the client displayed during the live preview.
+    const shipping = await estimateShipping(
+    input.shippingAddress.country,
+    input.shippingAddress.region,
+    cart.subtotal
+  );
+  const shippingFee = shipping.fee;
 
   const decremented: { productId: string; variantId: string | null; quantity: number }[] = [];
 
@@ -121,7 +135,6 @@ export async function placeOrder(input: PlaceOrderInput) {
       });
     }
 
-    const shippingFee = 0; // shipping calculation lands with the Shipping settings phase
     const total = cart.subtotal - discountAmount + shippingFee;
 
     const order = await Order.create({

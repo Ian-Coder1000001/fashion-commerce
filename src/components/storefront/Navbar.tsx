@@ -4,6 +4,7 @@ import { listEnabledCategories } from "@/services/category.service";
 import { getCartSummary } from "@/services/cart.service";
 import { getStoreSettings } from "@/services/settings.service";
 import { auth } from "@/lib/auth";
+import { SearchBar } from "@/components/storefront/SearchBar";
 
 export async function Navbar() {
   const [categories, session, cart, settings] = await Promise.all([
@@ -46,7 +47,10 @@ export async function Navbar() {
         </nav>
 
         <div className="flex items-center gap-5 text-xs tracking-wide uppercase text-fg-muted">
-          <span className="hidden sm:inline cursor-default">Search</span>
+
+                    <SearchBar />
+
+          {/* <span className="hidden sm:inline cursor-default">Search</span> */}
           <Link href={session ? "/account" : "/login"} className="hover:text-fg">
             Account
           </Link>
