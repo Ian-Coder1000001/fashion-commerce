@@ -2,9 +2,15 @@ import { connectToDatabase } from "@/lib/db";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
 import { getCartSummary, clearCurrentCart } from "@/services/cart.service";
-import { validateAndComputeDiscount, incrementCouponUsage } from "@/services/coupon.service";
+import {
+  validateAndComputeDiscount,
+  incrementCouponUsage,
+} from "@/services/coupon.service";
 import { estimateShipping } from "@/services/shipping.service";
 import { auth } from "@/lib/auth";
+
+import { sendEmail } from "@/lib/email";
+import User from "@/models/User";
 
 export interface ShippingAddressInput {
   fullName: string;
@@ -33,7 +39,7 @@ function generateOrderNumber(): string {
 async function decrementStock(
   productId: string,
   variantId: string | null,
-  quantity: number
+  quantity: number,
 ): Promise<boolean> {
   if (variantId) {
     // $elemMatch is required here, not separate "variants._id" / "variants.$.stock"
@@ -47,17 +53,14 @@ async function decrementStock(
         _id: productId,
         variants: { $elemMatch: { _id: variantId, stock: { $gte: quantity } } },
       },
-      { $inc: { "variants.$.stock": -quantity } }
+      { $inc: { "variants.$.stock": -quantity } },
     );
     return !!result;
   }
 
-
-
-
   const result = await Product.findOneAndUpdate(
     { _id: productId, stockQuantity: { $gte: quantity } },
-    { $inc: { stockQuantity: -quantity } }
+    { $inc: { stockQuantity: -quantity } },
   );
   return !!result;
 }
@@ -65,12 +68,12 @@ async function decrementStock(
 async function restoreStock(
   productId: string,
   variantId: string | null,
-  quantity: number
+  quantity: number,
 ) {
   if (variantId) {
     await Product.findOneAndUpdate(
       { _id: productId, "variants._id": variantId },
-      { $inc: { "variants.$.stock": quantity } }
+      { $inc: { "variants.$.stock": quantity } },
     );
     return;
   }
@@ -103,7 +106,10 @@ export async function placeOrder(input: PlaceOrderInput) {
   let discountAmount = 0;
   let appliedCouponId: string | undefined;
   if (input.couponCode) {
-    const result = await validateAndComputeDiscount(input.couponCode, cart.subtotal);
+    const result = await validateAndComputeDiscount(
+      input.couponCode,
+      cart.subtotal,
+    );
     if (!result.valid) {
       throw new CouponError(result.error ?? "Invalid coupon.");
     }
@@ -113,18 +119,26 @@ export async function placeOrder(input: PlaceOrderInput) {
 
   // Shipping is recomputed here from the submitted address — never
   // trust a fee the client displayed during the live preview.
-    const shipping = await estimateShipping(
+  const shipping = await estimateShipping(
     input.shippingAddress.country,
     input.shippingAddress.region,
-    cart.subtotal
+    cart.subtotal,
   );
   const shippingFee = shipping.fee;
 
-  const decremented: { productId: string; variantId: string | null; quantity: number }[] = [];
+  const decremented: {
+    productId: string;
+    variantId: string | null;
+    quantity: number;
+  }[] = [];
 
   try {
     for (const line of cart.lines) {
-      const ok = await decrementStock(line.productId, line.variantId, line.quantity);
+      const ok = await decrementStock(
+        line.productId,
+        line.variantId,
+        line.quantity,
+      );
       if (!ok) {
         throw new InsufficientStockError(line.name);
       }
@@ -166,6 +180,49 @@ export async function placeOrder(input: PlaceOrderInput) {
     }
 
     await clearCurrentCart();
+
+    // Best-effort — sendEmail never throws, so a failed email never
+    // breaks an otherwise-successful order.
+    const recipientEmail = session
+      ? (await User.findById(session.user.id).select("email").lean())?.email
+      : input.guestEmail;
+
+    if (recipientEmail) {
+      await sendEmail({
+        to: recipientEmail,
+        subject: `Order Confirmed — ${order.orderNumber}`,
+        html: `
+          <h2>Thank you for your order</h2>
+          <p>Order #${order.orderNumber}</p>
+          <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+                        ${order.items
+                          .map(
+                            (item: {
+                              name: string;
+                              quantity: number;
+                              price: number;
+                            }) => `
+              <tr>
+                <td style="padding:8px 0;">${item.name} × ${item.quantity}</td>
+                <td style="padding:8px 0; text-align:right;">${order.currency} ${(item.price * item.quantity).toLocaleString()}</td>
+              </tr>
+            `,
+                          )
+                          .join("")}
+          </table>
+          <p><strong>Subtotal:</strong> ${order.currency} ${order.subtotal.toLocaleString()}</p>
+          ${order.discountAmount > 0 ? `<p><strong>Discount:</strong> -${order.currency} ${order.discountAmount.toLocaleString()}</p>` : ""}
+          <p><strong>Shipping:</strong> ${order.currency} ${order.shippingFee.toLocaleString()}</p>
+          <p><strong>Total:</strong> ${order.currency} ${order.total.toLocaleString()}</p>
+          <p><strong>Payment method:</strong> ${order.paymentMethod === "cash_on_delivery" ? "Cash on Delivery" : "Pesapal"}</p>
+          <p><strong>Delivering to:</strong><br/>
+            ${order.shippingAddress.line1}<br/>
+            ${order.shippingAddress.city}, ${order.shippingAddress.country}
+          </p>
+        `,
+      });
+    }
+
     return order;
   } catch (err) {
     for (const d of decremented) {
