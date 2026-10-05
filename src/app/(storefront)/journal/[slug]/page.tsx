@@ -2,6 +2,30 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getPublishedPostBySlug } from "@/services/blog.service";
 
+
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const post = await getPublishedPostBySlug(slug);
+  if (!post) return {};
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      images: post.featuredImage?.secureUrl ? [post.featuredImage.secureUrl] : [],
+      type: "article",
+    },
+  };
+}
+
 export default async function JournalPostPage({
   params,
 }: {

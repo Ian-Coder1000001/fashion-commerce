@@ -3,10 +3,8 @@
 import { Suspense, useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-
 import { signIn, getSession } from "next-auth/react";
 import { mergeCartOnLoginAction } from "@/actions/cart.actions";
-
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -68,12 +66,8 @@ function LoginForm() {
         <p className="text-sm text-fg-muted mb-8">
           Access your account or the store admin. New here?{" "}
           <Link href="/register" className="underline">
-            Create an account ·{" "}
-            <Link href="/forgot-password" className="underline">
-              Forgot password?
-            </Link>
+            Create an account
           </Link>
-          .
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -106,6 +100,12 @@ function LoginForm() {
             {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
+
+        <p className="text-sm text-fg-muted mt-4">
+          <Link href="/forgot-password" className="underline">
+            Forgot password?
+          </Link>
+        </p>
       </div>
     </div>
   );

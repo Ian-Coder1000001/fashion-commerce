@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { registerCustomer } from "@/services/auth.service";
 
+import { contactRateLimit, getClientIp } from "@/lib/rate-limit";
+
 const registerSchema = z.object({
   name: z.string().min(1, "Name is required."),
   email: z.email("Enter a valid email."),
@@ -18,6 +20,15 @@ export async function registerAction(
   _prevState: RegisterState,
   formData: FormData
 ): Promise<RegisterState> {
+  const ip = await getClientIp();
+  // Reusing the contact rate limiter's bucket config (5 per 10 min) —
+  // registration abuse and contact-form spam share the same risk
+  // profile, so a separate limiter isn't needed.
+  const { success } = await contactRateLimit.limit(`register:${ip}`);
+  if (!success) {
+    return { error: "Too many attempts. Please try again in a few minutes." };
+  }
+
   const parsed = registerSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),

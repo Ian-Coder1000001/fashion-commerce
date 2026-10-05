@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import ContactMessage from "@/models/ContactMessage";
 
+import { contactRateLimit, getClientIp } from "@/lib/rate-limit";
+
 async function requireAdmin() {
   const session = await auth();
   if (!session || session.user.role !== "admin") {
@@ -30,6 +32,12 @@ export async function submitContactMessageAction(
   _prevState: ContactFormState,
   formData: FormData
 ): Promise<ContactFormState> {
+  const ip = await getClientIp();
+  const { success } = await contactRateLimit.limit(ip);
+  if (!success) {
+    return { error: "Too many messages sent. Please try again in a few minutes." };
+  }
+
   const parsed = contactSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),

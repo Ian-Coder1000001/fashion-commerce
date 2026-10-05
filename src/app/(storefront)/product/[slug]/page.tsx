@@ -7,6 +7,28 @@ import { auth } from "@/lib/auth";
 import { getWishlistProductIds } from "@/services/wishlist.service";
 import { WishlistButton } from "@/components/storefront/WishlistButton";
 
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+  if (!product) return {};
+
+  return {
+    title: product.name,
+    description: product.shortDescription || product.description?.slice(0, 160),
+    openGraph: {
+      title: product.name,
+      description: product.shortDescription || product.description?.slice(0, 160),
+      images: product.images?.[0]?.secureUrl ? [product.images[0].secureUrl] : [],
+    },
+  };
+}
+
 function formatPrice(amount: number, currency = "KES") {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
@@ -32,8 +54,36 @@ export default async function ProductPage({
   const onSale =
     typeof product.salePrice === "number" && product.salePrice < product.price;
 
+
+
+    const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description,
+    image: product.images?.map((img: { secureUrl: string }) => img.secureUrl) ?? [],
+    sku: product.sku,
+    offers: {
+      "@type": "Offer",
+      price: product.salePrice ?? product.price,
+      priceCurrency: product.currency ?? "KES",
+      availability:
+        product.stockQuantity > 0 || product.variants?.some((v: { stock: number }) => v.stock > 0)
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+    },
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+            <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+
+
+
       <ProductGallery
         images={product.images ?? []}
         productName={product.name}

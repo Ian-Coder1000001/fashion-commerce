@@ -9,6 +9,8 @@ import {
   type CouponValidationResult,
 } from "@/services/coupon.service";
 
+import { couponRateLimit, getClientIp } from "@/lib/rate-limit";
+
 async function requireAdmin() {
   const session = await auth();
   if (!session || session.user.role !== "admin") {
@@ -26,6 +28,15 @@ export async function applyCouponAction(
   code: string,
   subtotal: number
 ): Promise<CouponValidationResult> {
+  const ip = await getClientIp();
+  const { success } = await couponRateLimit.limit(ip);
+  if (!success) {
+    return {
+      valid: false,
+      discountAmount: 0,
+      error: "Too many attempts. Please wait a few minutes before trying again.",
+    };
+  }
   return validateAndComputeDiscount(code, subtotal);
 }
 

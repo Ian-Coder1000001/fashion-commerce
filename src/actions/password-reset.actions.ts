@@ -6,6 +6,7 @@ import {
   resetPasswordWithToken,
 } from "@/services/auth.service";
 import { sendEmail } from "@/lib/email";
+import { contactRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export interface ForgotPasswordState {
   submitted?: boolean;
@@ -15,6 +16,15 @@ export async function requestPasswordResetAction(
   _prevState: ForgotPasswordState,
   formData: FormData
 ): Promise<ForgotPasswordState> {
+  const ip = await getClientIp();
+  const { success } = await contactRateLimit.limit(`reset:${ip}`);
+  if (!success) {
+    // Same "always report success" principle as the rest of this
+    // function — don't let a rate-limit response become a way to tell
+    // whether an email is registered.
+    return { submitted: true };
+  }
+
   const email = String(formData.get("email") ?? "").trim();
   const parsed = z.email().safeParse(email);
 
