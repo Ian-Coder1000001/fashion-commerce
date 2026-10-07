@@ -16,6 +16,8 @@ import {
   removeVariantAction,
 } from "@/actions/product.actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminEditProductPage({
   params,
 }: {

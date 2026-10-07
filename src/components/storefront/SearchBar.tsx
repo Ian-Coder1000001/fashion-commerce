@@ -23,6 +23,7 @@ export function SearchBar() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search"
+        aria-label="Search products"
         disabled={isPending}
         className="w-32 focus:w-48 transition-all bg-transparent border-b border-transparent focus:border-border text-xs placeholder:text-fg-muted focus:outline-none py-1"
       />

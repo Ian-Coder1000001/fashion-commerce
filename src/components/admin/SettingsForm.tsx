@@ -46,8 +46,11 @@ function ColorField({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs tracking-wide text-fg-muted">{label}</label>
+      <label htmlFor={`color-${name}`} className="text-xs tracking-wide text-fg-muted">
+        {label}
+      </label>
       <input
+        id={`color-${name}`}
         type="color"
         name={name}
         defaultValue={defaultValue || "#141414"}

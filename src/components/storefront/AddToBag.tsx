@@ -30,7 +30,11 @@ export function AddToBag({ productId, variants, inStock }: AddToBagProps) {
   function handleAdd() {
     setAdded(false);
     startTransition(async () => {
-      await addToCartAction(productId, quantity, requiresVariant ? variantId : null);
+      await addToCartAction(
+        productId,
+        quantity,
+        requiresVariant ? variantId : null,
+      );
       setAdded(true);
       router.refresh();
     });
@@ -48,7 +52,9 @@ export function AddToBag({ productId, variants, inStock }: AddToBagProps) {
     <div className="flex flex-col gap-4">
       {requiresVariant && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs tracking-wide text-fg-muted">Size / Variant</label>
+          <label className="text-xs tracking-wide text-fg-muted">
+            Size / Variant
+          </label>
           <select
             value={variantId}
             onChange={(e) => setVariantId(e.target.value)}
@@ -67,6 +73,7 @@ export function AddToBag({ productId, variants, inStock }: AddToBagProps) {
         <select
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
+          aria-label="Quantity"
           className="h-11 border border-border bg-surface px-3 text-sm w-20"
         >
           {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (

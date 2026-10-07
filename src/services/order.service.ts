@@ -65,22 +65,26 @@ async function decrementStock(
   return !!result;
 }
 
-async function restoreStock(
+
+
+export async function restoreStock(
   productId: string,
   variantId: string | null,
-  quantity: number,
-) {
+  quantity: number
+): Promise<boolean> {
   if (variantId) {
-    await Product.findOneAndUpdate(
+    const result = await Product.findOneAndUpdate(
       { _id: productId, "variants._id": variantId },
-      { $inc: { "variants.$.stock": quantity } },
+      { $inc: { "variants.$.stock": quantity } }
     );
-    return;
+    return !!result;
   }
-  await Product.findByIdAndUpdate(productId, {
+  const result = await Product.findByIdAndUpdate(productId, {
     $inc: { stockQuantity: quantity },
   });
+  return !!result;
 }
+
 
 export class InsufficientStockError extends Error {
   constructor(public productName: string) {

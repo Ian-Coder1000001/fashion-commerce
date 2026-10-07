@@ -201,7 +201,7 @@ export function CheckoutForm({
             <input type="hidden" name="phone" value={selected.phone ?? ""} />
           </>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Full name"
               name="fullName"

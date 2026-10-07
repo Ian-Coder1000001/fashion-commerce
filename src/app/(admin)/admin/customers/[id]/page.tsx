@@ -6,6 +6,9 @@ import {
 import { Button } from "@/components/ui/Button";
 import type { Address } from "@/types/address";
 
+
+export const dynamic = "force-dynamic";
+
 function formatPrice(amount: number, currency = "KES") {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",

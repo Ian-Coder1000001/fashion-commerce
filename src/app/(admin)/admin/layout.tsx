@@ -11,7 +11,12 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-screen bg-bg">
       <AdminSidebar storeName={settings.storeName} />
-      <main className="flex-1 px-10 py-8">{children}</main>
+      <main
+        id="main-content"
+        className="flex-1 px-4 sm:px-6 md:px-10 pt-20 md:pt-8 pb-8 min-w-0"
+      >
+        {children}
+      </main>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export default async function AboutPage() {
         <div className="relative w-full h-[320px] sm:h-[420px] lg:h-[480px] border-b border-border overflow-hidden">
           <Image
             src={about.heroImage.secureUrl}
-            alt=""
+            alt={about.title ?? "Our Story"}
             fill
             sizes="100vw"
             className="object-cover"
@@ -121,7 +121,7 @@ export default async function AboutPage() {
                     {member.photo?.secureUrl && (
                       <Image
                         src={member.photo.secureUrl}
-                        alt=""
+                        alt={member.name}
                         fill
                         sizes="(min-width: 640px) 33vw, 50vw"
                         className="object-cover"

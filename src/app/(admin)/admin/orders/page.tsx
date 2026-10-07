@@ -3,6 +3,11 @@ import {
   updateOrderStatusAction,
 } from "@/actions/order.actions";
 
+import Link from "next/link";
+
+
+export const dynamic = "force-dynamic";
+
 function formatPrice(amount: number, currency = "KES") {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
@@ -12,11 +17,23 @@ function formatPrice(amount: number, currency = "KES") {
 }
 
 const ORDER_STATUSES = [
-  "pending", "confirmed", "processing", "packed",
-  "shipped", "delivered", "cancelled", "returned",
+  "pending",
+  "confirmed",
+  "processing",
+  "packed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "returned",
 ];
 
-const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded", "partially_refunded"];
+const PAYMENT_STATUSES = [
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+  "partially_refunded",
+];
 
 export default async function AdminOrdersPage() {
   const orders = await listOrdersForAdmin();
@@ -47,23 +64,46 @@ export default async function AdminOrdersPage() {
                 "Guest";
 
               return (
-                <tr key={String(order._id)} className="border-b border-border align-top">
-                  <td className="py-3">{order.orderNumber}</td>
+                <tr
+                  key={String(order._id)}
+                  className="border-b border-border align-top"
+                >
+                  <td className="py-3">
+                    <Link
+                      href={`/admin/orders/${order._id}`}
+                      className="hover:underline"
+                    >
+                      {order.orderNumber}
+                    </Link>
+                  </td>
                   <td className="py-3 text-fg-muted">{customerLabel}</td>
                   <td className="py-3">
                     {formatPrice(order.total, order.currency)}
                   </td>
                   <td className="py-3">
-                    <form action={updateOrderStatusAction} className="flex flex-col gap-2">
-                      <input type="hidden" name="orderId" value={String(order._id)} />
-                      <input type="hidden" name="orderStatus" value={order.orderStatus} />
+                    <form
+                      action={updateOrderStatusAction}
+                      className="flex flex-col gap-2"
+                    >
+                      <input
+                        type="hidden"
+                        name="orderId"
+                        value={String(order._id)}
+                      />
+                      <input
+                        type="hidden"
+                        name="orderStatus"
+                        value={order.orderStatus}
+                      />
                       <select
                         name="paymentStatus"
                         defaultValue={order.paymentStatus}
                         className="h-8 border border-border bg-surface px-2 text-xs"
                       >
                         {PAYMENT_STATUSES.map((s) => (
-                          <option key={s} value={s}>{s}</option>
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
                         ))}
                       </select>
                       <button className="text-xs text-fg-muted hover:text-fg text-left">
@@ -72,16 +112,29 @@ export default async function AdminOrdersPage() {
                     </form>
                   </td>
                   <td className="py-3">
-                    <form action={updateOrderStatusAction} className="flex flex-col gap-2">
-                      <input type="hidden" name="orderId" value={String(order._id)} />
-                      <input type="hidden" name="paymentStatus" value={order.paymentStatus} />
+                    <form
+                      action={updateOrderStatusAction}
+                      className="flex flex-col gap-2"
+                    >
+                      <input
+                        type="hidden"
+                        name="orderId"
+                        value={String(order._id)}
+                      />
+                      <input
+                        type="hidden"
+                        name="paymentStatus"
+                        value={order.paymentStatus}
+                      />
                       <select
                         name="orderStatus"
                         defaultValue={order.orderStatus}
                         className="h-8 border border-border bg-surface px-2 text-xs"
                       >
                         {ORDER_STATUSES.map((s) => (
-                          <option key={s} value={s}>{s}</option>
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
                         ))}
                       </select>
                       <button className="text-xs text-fg-muted hover:text-fg text-left">
