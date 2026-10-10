@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
+import { useEffect } from "react";
 
 const NAV_SECTIONS = [
   {
@@ -13,6 +14,7 @@ const NAV_SECTIONS = [
       { href: "/admin/products", label: "Products" },
       { href: "/admin/categories", label: "Categories" },
       { href: "/admin/collections", label: "Collections" },
+      { href: "/admin/reviews", label: "Reviews" },
     ],
   },
   {
@@ -51,6 +53,15 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   const navContent = (
     <nav className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-6">
       <Link
@@ -58,7 +69,7 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
         onClick={() => setIsOpen(false)}
         className={clsx(
           "text-sm px-2 py-1.5",
-          pathname === "/admin" ? "text-fg" : "text-fg-muted hover:text-fg"
+          pathname === "/admin" ? "text-fg" : "text-fg-muted hover:text-fg",
         )}
       >
         Dashboard
@@ -71,7 +82,8 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
           </p>
           <div className="flex flex-col">
             {section.items.map((item) => {
-              const isActive = pathname.startsWith(item.href) && item.href !== "/admin";
+              const isActive =
+                pathname.startsWith(item.href) && item.href !== "/admin";
               return (
                 <Link
                   key={item.href + item.label}
@@ -79,7 +91,7 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
                   onClick={() => setIsOpen(false)}
                   className={clsx(
                     "text-sm px-2 py-1.5",
-                    isActive ? "text-fg" : "text-fg-muted hover:text-fg"
+                    isActive ? "text-fg" : "text-fg-muted hover:text-fg",
                   )}
                 >
                   {item.label}
@@ -120,11 +132,14 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
       )}
 
       <aside
+        role="dialog"
+        aria-modal={isOpen ? "true" : undefined}
+        aria-label="Admin menu"
         className={clsx(
           "w-72 md:w-60 shrink-0 border-r border-border bg-bg flex flex-col",
           "fixed inset-y-0 left-0 z-50 transition-transform duration-200",
           "md:static md:translate-x-0 md:h-screen md:sticky md:top-0",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="h-16 flex items-center justify-between px-6 border-b border-border">

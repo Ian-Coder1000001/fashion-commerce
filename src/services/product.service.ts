@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/db";
 import Product from "@/models/Product";
 import { deleteMedia, deleteManyMedia, type MediaAsset } from "@/services/media.service";
+import Review from "@/models/Review";
 
 export interface CreateProductInput {
   name: string;
@@ -222,6 +223,7 @@ export async function deleteProduct(id: string) {
     .filter(Boolean) as MediaAsset[];
 
   await deleteManyMedia([...galleryAssets, ...variantAssets]);
+  await Review.deleteMany({ product: id });
   await product.deleteOne();
 
   return product;
