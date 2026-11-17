@@ -5,8 +5,9 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import ContactMessage from "@/models/ContactMessage";
-
 import { contactRateLimit, getClientIp } from "@/lib/rate-limit";
+import { sendEmail, escapeHtml } from "@/lib/email";
+import { getStoreSettings } from "@/services/settings.service";
 
 async function requireAdmin() {
   const session = await auth();
@@ -52,6 +53,25 @@ export async function submitContactMessageAction(
 
   await connectToDatabase();
   await ContactMessage.create(parsed.data);
+
+  // Alert the store owner by email. The message is already saved above,
+  // so a failed email never loses anything.
+  const settings = await getStoreSettings();
+  if (settings.contactEmail) {
+    const { name, email, phone, subject, message } = parsed.data;
+    await sendEmail({
+      to: settings.contactEmail,
+      replyTo: email,
+      subject: `New message: ${subject}`.replace(/[\r\n]+/g, " ").slice(0, 150),
+      html: `
+        <h2>New contact message</h2>
+        <p><strong>From:</strong> ${escapeHtml(name)} (${escapeHtml(email)})</p>
+        ${phone ? `<p><strong>Phone:</strong> ${escapeHtml(phone)}</p>` : ""}
+        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+        <p style="white-space:pre-line;">${escapeHtml(message)}</p>
+      `,
+    });
+  }
 
   return { success: true };
 }

@@ -7,6 +7,17 @@ import { signIn, getSession } from "next-auth/react";
 import { mergeCartOnLoginAction } from "@/actions/cart.actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { GoogleButton } from "@/components/storefront/GoogleButton";
+
+// Errors that come back from Google sign-in as /login?error=...
+// One generic message for every refusal, so it never reveals whether
+// an email is an admin, disabled, or unverified.
+const URL_ERROR_MESSAGES: Record<string, string> = {
+  AccessDenied:
+    "That Google account can't be used to sign in here. Try your email and password instead, or contact us if you think this is a mistake.",
+  Configuration:
+    "Google sign-in isn't available right now. Please use your email and password.",
+};
 
 export default function LoginPage() {
   return (
@@ -20,6 +31,11 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const explicitCallbackUrl = searchParams.get("callbackUrl");
+  const urlError = searchParams.get("error");
+  const urlErrorMessage = urlError
+    ? (URL_ERROR_MESSAGES[urlError] ??
+      "Something went wrong signing you in. Please try again.")
+    : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,6 +86,12 @@ function LoginForm() {
           </Link>
         </p>
 
+        {urlErrorMessage && !error && (
+          <p role="alert" className="text-sm text-error mb-4">
+            {urlErrorMessage}
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
             label="Email"
@@ -106,6 +128,14 @@ function LoginForm() {
             Forgot password?
           </Link>
         </p>
+
+        <div className="flex items-center gap-4 my-6" aria-hidden="true">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs tracking-wide uppercase text-fg-muted">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <GoogleButton next={explicitCallbackUrl} />
       </div>
     </div>
   );

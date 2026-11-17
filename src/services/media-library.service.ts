@@ -4,6 +4,8 @@ import Product from "@/models/Product";
 import BlogPost from "@/models/BlogPost";
 import StoreSettings from "@/models/StoreSettings";
 import AboutPage from "@/models/AboutPage";
+import HomePage from "@/models/HomePage";
+import { SECTION_LABELS, type SectionType } from "@/lib/home-sections";
 
 export interface MediaUsage {
   type: string;
@@ -28,11 +30,10 @@ interface CloudinaryResource {
   created_at: string;
 }
 
-// Only these folders are ever written to by this app (see uploadMedia
-// callers throughout the codebase). Restricting to them keeps unrelated
-// images from other projects sharing the same Cloudinary account out of
-// this store's Media Library entirely.
-const OWNED_PREFIXES = ["products/", "blog/", "about/", "branding/"];
+// Only these folders are ever written to by this app. Restricting to
+// them keeps unrelated images from other projects sharing the same
+// Cloudinary account out of this store's Media Library entirely.
+const OWNED_PREFIXES = ["products/", "blog/", "about/", "branding/", "homepage/"];
 
 async function fetchOwnedCloudinaryResources(): Promise<CloudinaryResource[]> {
   const results = await Promise.all(
@@ -56,12 +57,13 @@ async function fetchOwnedCloudinaryResources(): Promise<CloudinaryResource[]> {
 export async function listMediaLibrary(): Promise<MediaLibraryItem[]> {
   await connectToDatabase();
 
-  const [resources, products, posts, settings, about] = await Promise.all([
+  const [resources, products, posts, settings, about, home] = await Promise.all([
     fetchOwnedCloudinaryResources(),
     Product.find().select("name images variants").lean(),
     BlogPost.find().select("title featuredImage").lean(),
     StoreSettings.findOne().lean(),
     AboutPage.findOne().lean(),
+    HomePage.findOne().lean(),
   ]);
 
   const usageMap = new Map<string, MediaUsage[]>();
@@ -123,6 +125,16 @@ export async function listMediaLibrary(): Promise<MediaLibraryItem[]> {
         type: "About page",
         label: `Team: ${member.name}`,
         href: "/admin/about",
+      });
+    }
+  }
+
+  for (const section of home?.sections ?? []) {
+    if (section.image?.publicId) {
+      addUsage(section.image.publicId, {
+        type: "Homepage",
+        label: SECTION_LABELS[section.type as SectionType] ?? "Section",
+        href: "/admin/homepage",
       });
     }
   }

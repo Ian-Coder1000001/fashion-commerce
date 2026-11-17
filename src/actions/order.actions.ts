@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import Order from "@/models/Order";
-
 import { restoreStock } from "@/services/order.service";
+import { sendOrderStatusEmail } from "@/services/order-email.service";
 
 async function requireAdmin() {
   const session = await auth();
@@ -25,32 +25,23 @@ export async function listOrdersForAdmin() {
 }
 
 const ORDER_STATUSES = [
-  "pending", "confirmed", "processing", "packed",
-  "shipped", "delivered", "cancelled", "returned",
+  "pending",
+  "confirmed",
+  "processing",
+  "packed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "returned",
 ] as const;
 
 const PAYMENT_STATUSES = [
-  "pending", "paid", "failed", "refunded", "partially_refunded",
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+  "partially_refunded",
 ] as const;
-
-export async function updateOrderStatusAction(formData: FormData) {
-  await requireAdmin();
-  await connectToDatabase();
-
-  const orderId = String(formData.get("orderId"));
-  const orderStatus = String(formData.get("orderStatus"));
-  const paymentStatus = String(formData.get("paymentStatus"));
-
-  if (!ORDER_STATUSES.includes(orderStatus as (typeof ORDER_STATUSES)[number])) {
-    throw new Error("Invalid order status.");
-  }
-  if (!PAYMENT_STATUSES.includes(paymentStatus as (typeof PAYMENT_STATUSES)[number])) {
-    throw new Error("Invalid payment status.");
-  }
-
-  await Order.findByIdAndUpdate(orderId, { orderStatus, paymentStatus });
-  revalidatePath("/admin/orders");
-}
 
 export async function getOrderForAdmin(orderId: string) {
   await requireAdmin();
@@ -68,9 +59,6 @@ export async function updateOrderNotesAction(orderId: string, formData: FormData
 }
 
 const CANCELLABLE_STATUSES = ["pending", "confirmed", "processing"];
-
-
-
 
 export async function cancelOrderAction(orderId: string) {
   await requireAdmin();
@@ -105,43 +93,67 @@ export async function cancelOrderAction(orderId: string) {
   }
   await order.save();
 
+  await sendOrderStatusEmail(order, "cancelled");
+
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/orders");
 }
 
+export interface OrderStatusState {
+  error?: string;
+  savedOrderStatus?: string;
+  savedPaymentStatus?: string;
+}
 
+export async function saveOrderStatusAction(
+  orderId: string,
+  _prevState: OrderStatusState,
+  formData: FormData
+): Promise<OrderStatusState> {
+  await requireAdmin();
+  await connectToDatabase();
 
+  const orderStatus = String(formData.get("orderStatus"));
+  const paymentStatus = String(formData.get("paymentStatus"));
 
+  if (!ORDER_STATUSES.includes(orderStatus as (typeof ORDER_STATUSES)[number])) {
+    return { error: "Invalid order status." };
+  }
+  if (!PAYMENT_STATUSES.includes(paymentStatus as (typeof PAYMENT_STATUSES)[number])) {
+    return { error: "Invalid payment status." };
+  }
 
+  const current = await Order.findById(orderId).select("orderStatus");
+  if (!current) return { error: "Order not found." };
 
+  if (current.orderStatus === "cancelled" && orderStatus !== "cancelled") {
+    return { error: "This order was cancelled and can't be changed." };
+  }
+  if (orderStatus === "cancelled" && current.orderStatus !== "cancelled") {
+    return {
+      error:
+        "To cancel an order, use “Cancel order & restore stock” below so the stock is returned.",
+    };
+  }
 
-// export async function cancelOrderAction(orderId: string) {
-//   await requireAdmin();
-//   await connectToDatabase();
+  // { new: true } returns the document as it is AFTER the write, so the
+  // confirmation shown to the admin reflects what the database really holds.
+  const updated = await Order.findByIdAndUpdate(
+    orderId,
+    { orderStatus, paymentStatus },
+    { new: true }
+  );
+  if (!updated) return { error: "Order not found." };
 
-//   const order = await Order.findById(orderId);
-//   if (!order) return;
+  if (updated.orderStatus !== current.orderStatus) {
+    await sendOrderStatusEmail(updated, updated.orderStatus);
+  }
 
-//   if (!CANCELLABLE_STATUSES.includes(order.orderStatus)) {
-//     throw new Error(
-//       "This order can no longer be cancelled — it's already been shipped, delivered, or cancelled."
-//     );
-//   }
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders");
 
-//   // Restore every item's stock — cancelling an order should give the
-//   // inventory back, same principle as the checkout rollback when a
-//   // Pesapal payment fails partway through.
-//   for (const item of order.items) {
-//     await restoreStock(
-//       String(item.product),
-//       item.variantId ? String(item.variantId) : null,
-//       item.quantity
-//     );
-//   }
-
-//   order.orderStatus = "cancelled";
-//   await order.save();
-
-//   revalidatePath(`/admin/orders/${orderId}`);
-//   revalidatePath("/admin/orders");
-// }
+  return {
+    savedOrderStatus: updated.orderStatus,
+    savedPaymentStatus: updated.paymentStatus,
+  };
+}

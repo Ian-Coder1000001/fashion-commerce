@@ -1,3 +1,4 @@
+import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import Collection from "@/models/Collection";
 
@@ -9,4 +10,10 @@ export async function listEnabledCollections() {
 export async function getCollectionBySlug(slug: string) {
   await connectToDatabase();
   return Collection.findOne({ slug, isEnabled: true }).lean();
+}
+
+export async function getCollectionById(id: string) {
+  if (!isValidObjectId(id)) return null;
+  await connectToDatabase();
+  return Collection.findOne({ _id: id, isEnabled: true }).lean();
 }

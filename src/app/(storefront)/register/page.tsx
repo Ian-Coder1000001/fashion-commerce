@@ -8,6 +8,8 @@ import { signIn } from "next-auth/react";
 import { registerAction, type RegisterState } from "@/actions/auth.actions";
 import { mergeCartOnLoginAction } from "@/actions/cart.actions";
 
+import { GoogleButton } from "@/components/storefront/GoogleButton";
+
 
 
 import { Button } from "@/components/ui/Button";
@@ -82,6 +84,18 @@ export default function RegisterPage() {
             {isPending ? "Creating account…" : "Create account"}
           </Button>
         </form>
+
+
+        <div className="flex items-center gap-4 my-6" aria-hidden="true">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs tracking-wide uppercase text-fg-muted">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <GoogleButton />
+
+
+
       </div>
     </div>
   );

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
-import { useEffect } from "react";
 
 const NAV_SECTIONS = [
   {
@@ -34,6 +33,7 @@ const NAV_SECTIONS = [
   {
     label: "Content",
     items: [
+      { href: "/admin/homepage", label: "Homepage" },
       { href: "/admin/blog", label: "Blog" },
       { href: "/admin/about", label: "About Page" },
       { href: "/admin/media", label: "Media" },
@@ -69,7 +69,7 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
         onClick={() => setIsOpen(false)}
         className={clsx(
           "text-sm px-2 py-1.5",
-          pathname === "/admin" ? "text-fg" : "text-fg-muted hover:text-fg",
+          pathname === "/admin" ? "text-fg" : "text-fg-muted hover:text-fg"
         )}
       >
         Dashboard
@@ -82,8 +82,7 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
           </p>
           <div className="flex flex-col">
             {section.items.map((item) => {
-              const isActive =
-                pathname.startsWith(item.href) && item.href !== "/admin";
+              const isActive = pathname.startsWith(item.href) && item.href !== "/admin";
               return (
                 <Link
                   key={item.href + item.label}
@@ -91,7 +90,7 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
                   onClick={() => setIsOpen(false)}
                   className={clsx(
                     "text-sm px-2 py-1.5",
-                    isActive ? "text-fg" : "text-fg-muted hover:text-fg",
+                    isActive ? "text-fg" : "text-fg-muted hover:text-fg"
                   )}
                 >
                   {item.label}
@@ -106,9 +105,6 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
 
   return (
     <>
-      {/* Mobile top bar — only the hamburger trigger lives outside the
-          drawer itself, same self-contained pattern as the storefront's
-          MobileMenu, so no cross-component state is needed. */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-bg border-b border-border z-30 flex items-center px-4 gap-3">
         <button
           onClick={() => setIsOpen(true)}
@@ -123,7 +119,6 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
         </span>
       </div>
 
-      {/* Backdrop, mobile only, only when drawer is open */}
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
@@ -139,7 +134,7 @@ export function AdminSidebar({ storeName }: { storeName?: string }) {
           "w-72 md:w-60 shrink-0 border-r border-border bg-bg flex flex-col",
           "fixed inset-y-0 left-0 z-50 transition-transform duration-200",
           "md:static md:translate-x-0 md:h-screen md:sticky md:top-0",
-          isOpen ? "translate-x-0" : "-translate-x-full",
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="h-16 flex items-center justify-between px-6 border-b border-border">

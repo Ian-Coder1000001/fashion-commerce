@@ -4,9 +4,10 @@ import {
   getOrderForAdmin,
   updateOrderNotesAction,
   cancelOrderAction,
-  updateOrderStatusAction,
 } from "@/actions/order.actions";
 import { Button } from "@/components/ui/Button";
+
+import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,22 @@ function formatPrice(amount: number, currency = "KES") {
 }
 
 const ORDER_STATUSES = [
-  "pending", "confirmed", "processing", "packed",
-  "shipped", "delivered", "cancelled", "returned",
+  "pending",
+  "confirmed",
+  "processing",
+  "packed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "returned",
 ];
-const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded", "partially_refunded"];
+const PAYMENT_STATUSES = [
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+  "partially_refunded",
+];
 const CANCELLABLE_STATUSES = ["pending", "confirmed", "processing"];
 
 export default async function AdminOrderDetailPage({
@@ -35,7 +48,11 @@ export default async function AdminOrderDetailPage({
 
   if (!order) notFound();
 
-  const populatedUser = order.user as { _id: string; name?: string; email?: string } | null;
+  const populatedUser = order.user as {
+    _id: string;
+    name?: string;
+    email?: string;
+  } | null;
   const customerLabel = populatedUser?.name ?? order.guestEmail ?? "Guest";
   const customerEmail = populatedUser?.email ?? order.guestEmail;
   const canCancel = CANCELLABLE_STATUSES.includes(order.orderStatus);
@@ -84,7 +101,7 @@ export default async function AdminOrderDetailPage({
                       size?: string;
                       color?: string;
                     },
-                    i: number
+                    i: number,
                   ) => (
                     <tr key={i} className="border-b border-border">
                       <td className="py-3">
@@ -92,17 +109,24 @@ export default async function AdminOrderDetailPage({
                         {(item.size || item.color) && (
                           <span className="text-fg-muted">
                             {" "}
-                            ({[item.size, item.color].filter(Boolean).join(" / ")})
+                            (
+                            {[item.size, item.color]
+                              .filter(Boolean)
+                              .join(" / ")}
+                            )
                           </span>
                         )}
                       </td>
                       <td className="py-3 text-fg-muted">{item.sku}</td>
                       <td className="py-3">{item.quantity}</td>
                       <td className="py-3 text-right">
-                        {formatPrice(item.price * item.quantity, order.currency)}
+                        {formatPrice(
+                          item.price * item.quantity,
+                          order.currency,
+                        )}
                       </td>
                     </tr>
-                  )
+                  ),
                 )}
               </tbody>
             </table>
@@ -114,8 +138,12 @@ export default async function AdminOrderDetailPage({
               </div>
               {order.discountAmount > 0 && (
                 <div className="flex justify-between text-fg-muted">
-                  <span>Discount{order.couponCode ? ` (${order.couponCode})` : ""}</span>
-                  <span>-{formatPrice(order.discountAmount, order.currency)}</span>
+                  <span>
+                    Discount{order.couponCode ? ` (${order.couponCode})` : ""}
+                  </span>
+                  <span>
+                    -{formatPrice(order.discountAmount, order.currency)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between text-fg-muted">
@@ -136,10 +164,14 @@ export default async function AdminOrderDetailPage({
             <div className="text-sm text-fg-muted">
               <p>{order.shippingAddress.fullName}</p>
               <p>{order.shippingAddress.line1}</p>
-              {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
+              {order.shippingAddress.line2 && (
+                <p>{order.shippingAddress.line2}</p>
+              )}
               <p>
                 {order.shippingAddress.city}
-                {order.shippingAddress.region ? `, ${order.shippingAddress.region}` : ""}{" "}
+                {order.shippingAddress.region
+                  ? `, ${order.shippingAddress.region}`
+                  : ""}{" "}
                 {order.shippingAddress.postalCode ?? ""}
               </p>
               <p>{order.shippingAddress.country}</p>
@@ -151,7 +183,10 @@ export default async function AdminOrderDetailPage({
             <h2 className="text-sm tracking-wide uppercase text-fg-muted mb-4">
               Internal Notes
             </h2>
-            <form action={updateOrderNotesAction.bind(null, id)} className="flex flex-col gap-3">
+            <form
+              action={updateOrderNotesAction.bind(null, id)}
+              className="flex flex-col gap-3"
+            >
               <textarea
                 name="notes"
                 defaultValue={order.notes ?? ""}
@@ -205,47 +240,22 @@ export default async function AdminOrderDetailPage({
                 separate forms, each silently carrying the other field's
                 stale value in a hidden input, which could overwrite it
                 back to an old value depending on which you saved first. */}
-            <form action={updateOrderStatusAction} className="flex flex-col gap-3">
-              <input type="hidden" name="orderId" value={id} />
-              <div className="flex flex-col gap-1">
-                <label className="text-xs tracking-wide text-fg-muted">
-                  Payment status
-                </label>
-                <select
-                  name="paymentStatus"
-                  defaultValue={order.paymentStatus}
-                  className="h-9 border border-border bg-surface px-2 text-sm"
-                >
-                  {PAYMENT_STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs tracking-wide text-fg-muted">
-                  Order status
-                </label>
-                <select
-                  name="orderStatus"
-                  defaultValue={order.orderStatus}
-                  className="h-9 border border-border bg-surface px-2 text-sm"
-                >
-                  {ORDER_STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <Button type="submit" size="sm" variant="secondary">
-                Save status
-              </Button>
-            </form>
+
+            <OrderStatusForm
+              orderId={id}
+              orderStatus={order.orderStatus}
+              paymentStatus={order.paymentStatus}
+            />
 
             {canCancel && (
               <form
                 action={cancelOrderAction.bind(null, id)}
                 className="mt-4 pt-4 border-t border-border"
               >
-                <button type="submit" className="text-xs text-fg-muted hover:text-error">
+                <button
+                  type="submit"
+                  className="text-xs text-fg-muted hover:text-error"
+                >
                   Cancel order &amp; restore stock
                 </button>
               </form>
@@ -256,9 +266,6 @@ export default async function AdminOrderDetailPage({
     </div>
   );
 }
-
-
-
 
 // import Link from "next/link";
 // import { notFound } from "next/navigation";

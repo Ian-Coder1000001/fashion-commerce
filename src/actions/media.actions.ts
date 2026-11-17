@@ -6,6 +6,8 @@ import { connectToDatabase } from "@/lib/db";
 import Product from "@/models/Product";
 import BlogPost from "@/models/BlogPost";
 import StoreSettings from "@/models/StoreSettings";
+import AboutPage from "@/models/AboutPage";
+import HomePage from "@/models/HomePage";
 import { deleteMedia } from "@/services/media.service";
 import { listMediaLibrary } from "@/services/media-library.service";
 
@@ -23,9 +25,8 @@ export async function listMediaForAdmin() {
 
 /**
  * Deletes a Cloudinary asset AND unlinks it from every document that
- * references it, so nothing is left pointing at a broken image. This is
- * the "delete anyway" path for an image that's still in use — the admin
- * page requires explicit confirmation before calling this.
+ * references it, so nothing is left pointing at a broken image. The
+ * admin page requires explicit confirmation before calling this.
  */
 export async function deleteMediaAction(publicId: string) {
   await requireAdmin();
@@ -48,8 +49,24 @@ export async function deleteMediaAction(publicId: string) {
     { "logo.publicId": publicId },
     { $unset: { logo: "" } }
   );
+  await AboutPage.updateMany(
+    { "heroImage.publicId": publicId },
+    { $unset: { heroImage: "" } }
+  );
+  await AboutPage.updateMany(
+    { "team.photo.publicId": publicId },
+    { $unset: { "team.$[elem].photo": "" } },
+    { arrayFilters: [{ "elem.photo.publicId": publicId }] }
+  );
+  await HomePage.updateMany(
+    { "sections.image.publicId": publicId },
+    { $unset: { "sections.$[elem].image": "" } },
+    { arrayFilters: [{ "elem.image.publicId": publicId }] }
+  );
 
   await deleteMedia(publicId);
 
   revalidatePath("/admin/media");
+  revalidatePath("/");
+  revalidatePath("/about");
 }
